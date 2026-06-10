@@ -332,7 +332,7 @@ while True:
     
     raspar(LOGIN, SENHA, CAMINHO)
     
-    espera = 10*60 - (datetime.now() - datetime.now()).total_seconds()
+    espera = 10*60 - (datetime.now() - inicio).total_seconds()
     print(f"Aguardando {espera} segundos para completar 10 minutos")
     time_aux.sleep(espera)
 
