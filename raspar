@@ -21,14 +21,13 @@ import time as time_aux
 import glob
 import os
 
+from IPython.display import clear_output
 
 def raspar(LOGIN, SENHA, CAMINHO):
     
-    print(f"INICIANDO RASPAGEM {datetime.now().strftime(format="%Y/%m/%d %H:%M")}")
-    
-    edge_service = Service(executable_path=r'C:/Users/x20597602/selenium/msedgedriver.exe')
+    edge_service = Service(executable_path=r'#####/msedgedriver.exe')
     options = Options()
-    options.add_argument("--headless=new")
+    # options.add_argument("--headless=new")
     options.add_argument("--window-size=1920,1080")
 
     driver = webdriver.Edge(service=edge_service, options=options)
@@ -66,7 +65,7 @@ def raspar(LOGIN, SENHA, CAMINHO):
             nome   = cells[4]
             link   = cells[-2]
             codigo = cells[-1]
-            link   = row.xpath(".//a[@name='linkPeriodo']/@href")[0]
+            link   = row.xpath(".//a[@name='linkPeriodo']/@href")[0].split("&")[0]
             
             try:
                 data = datetime.strptime(cells[5], "%d/%m/%Y %H:%M")
@@ -92,7 +91,7 @@ def raspar(LOGIN, SENHA, CAMINHO):
         
         ActionChains(driver).move_to_element(driver.find_elements("xpath", "//a[@name='linkPeriodo']")[-1]).perform()
         
-    df_info = pd.DataFrame(auxInfo, columns=["codigo", "nome", "cidade", "rede", "data", "link"]).drop_duplicates().reset_index(drop=True)
+    df_info = pd.DataFrame(auxInfo, columns=["codigo_estacao", "nome", "cidade", "rede", "data", "link"]).drop_duplicates().reset_index(drop=True)
     # df_info.to_excel(CAMINHO / f"dados_estacoes_salvar_{datetime.today().strftime('%Y%m%d_%H%M%S')}.xlsx", index=False)
     # df_info
 
@@ -103,13 +102,17 @@ def raspar(LOGIN, SENHA, CAMINHO):
     i = 0
     auxDf = []
 
-    link_datainicial = int(datetime.combine(date.today(), time(3, 0)).timestamp() * 1000)
-    link_datafinal = int(datetime.combine(date.today()+timedelta(days=1), time(2, 59)).timestamp() * 1000)
+    # link_datainicial = int(datetime.combine(date.today(), time(3, 0)).timestamp() * 1000)
+    # link_datafinal = int(datetime.combine(date.today()+timedelta(days=1), time(2, 59)).timestamp() * 1000)
+    link_datainicial = round((datetime.now() - timedelta(hours=24-3)).timestamp()*1000)
+    link_datafinal = round((datetime.now() + timedelta(hours=3)).timestamp()*1000)
+            
+    print(f"{I} estações válidas")        
             
     while len(links):
     # for i in range(1):
         
-        link = links[0].split("&")[0]
+        link = links[0]#.split("&")[0]
         j = 0
 
         # if link not in df_dados["salvar_id"].unique():
@@ -134,66 +137,6 @@ def raspar(LOGIN, SENHA, CAMINHO):
             )
             driver.get(url)
 
-
-            # while j < 3:
-            #     WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "periodoTable")))
-            #     try:
-            #         WebDriverWait(driver, 10).until_not(
-            #             EC.text_to_be_present_in_element(
-            #                 (By.CLASS_NAME, "dataTables_empty"),
-            #                 "Carregando"
-            #             )
-            #         )
-                    
-            #         auxInfo = driver.find_element("id", "tituloCard").text.split("|")
-                    
-            #         estacao_id = auxInfo[0].split("(")[-1].split(")")[0].strip()
-                    
-            #         page = driver.page_source
-            #         tree = html.fromstring(page)
-            #         mensagem = tree.xpath("//td[contains(@class,'dataTables_empty')]/text()")
-            #         if mensagem and "Nenhum" in mensagem[0]:
-            #             auxDf.append([estacao_id, None, None, None])
-            #         else:
-            #             rows = tree.xpath("//table[@id='periodoTable']//tr")
-            #             for row in rows:
-            #                 cells = row.xpath(".//td")
-            #                 if cells:
-                                
-            #                     try:
-            #                         datahora = datetime.strptime(cells[0].xpath(".//text()")[0], "%d/%m/%Y %H:%M")
-            #                     except ValueError:
-            #                         continue
-
-            #                     try:
-            #                         chuva_mm = float(cells[1].xpath(".//text()")[0].replace(",", "."))
-            #                     except:
-            #                         chuva_mm = None
-
-            #                     qualificacao = cells[2].xpath(".//text()")[0]
-
-            #                     auxDf.append([
-            #                         estacao_id,
-            #                         datahora,
-            #                         chuva_mm,
-            #                         qualificacao,
-            #                         # link
-            #                     ])
-                    
-            #         print(f"{estacao_id}: {i}/{I}")
-            #         i += 1
-            #         break
-            #     except TimeoutException:
-            #         print("tentando de novo", j)
-            #         j += 1
-            #         driver.refresh()
-            #         # break
-            
-        # else:
-        #     print(f"{link} já coletado")
-        # links.pop(0)
-        # # i += 1
-            
             MAX_RETRY = 3
             for tentativa in range(MAX_RETRY):
                 try:
@@ -209,16 +152,6 @@ def raspar(LOGIN, SENHA, CAMINHO):
                     # id estação
                     # =====================================================
 
-                    titulo = driver.find_element(By.ID, "tituloCard").text
-
-                    estacao_id = (
-                        titulo
-                        .split("|")[0]
-                        .split("(")[-1]
-                        .split(")")[0]
-                        .strip()
-                    )
-
                     # =====================================================
                     # parse HTML
                     # =====================================================
@@ -232,13 +165,15 @@ def raspar(LOGIN, SENHA, CAMINHO):
                     mensagem = tree.xpath("//td[contains(@class,'dataTables_empty')]/text()")
 
                     if mensagem and "Nenhum" in mensagem[0]:
-                        auxDf.append([
-                            estacao_id,
-                            None,
-                            None,
-                            None
-                        ])
-
+                        # auxDf.append([
+                        #     estacao_id,
+                        #     None,
+                        #     None,
+                        #     None,
+                        #     link
+                        # ])
+                        break
+                    
                     else:
                         rows = tree.xpath("//table[@id='periodoTable']//tbody/tr")
 
@@ -264,20 +199,33 @@ def raspar(LOGIN, SENHA, CAMINHO):
 
                             try:
                                 chuva_mm = float(valores[1].replace(",", "."))
-
                             except:
                                 chuva_mm = None
 
                             qualificacao = valores[2]
 
+                            # titulo = driver.find_element(By.ID, "tituloCard").text
+                            # estacao_id = (
+                            #     titulo
+                            #     .split("|")[0]
+                            #     .split("(")[-1]
+                            #     .split(")")[0]
+                            #     .strip()
+                            # )
+                            
+                            # if(estacao_id) == '':
+                            #     print(f"####VERIFICAR {link}")
+
                             auxDf.append([
-                                estacao_id,
+                                # estacao_id,
+                                link,
                                 datahora,
                                 chuva_mm,
-                                qualificacao
+                                qualificacao,
                             ])
 
-                    print(f"{estacao_id}: {i+1}/{I}")
+                    # print(f"{estacao_id}: {i+1}/{I}")
+                    print(f"{link}: {i+1}/{I}")
 
                     links.pop(0)
                     i += 1
@@ -290,35 +238,58 @@ def raspar(LOGIN, SENHA, CAMINHO):
 
             else:
                 print(f"Falhou após {MAX_RETRY} tentativas")
-
-
-    driver.find_element('xpath', '//*[@id="expandmenu"]/ul/li[1]/div/a/input').click()
+                break
+    try:
+        driver.find_element('xpath', '//*[@id="expandmenu"]/ul/li[1]/div/a/input').click()
+    except ElementNotInteractableException:
+        pass
     driver.quit()    
     
     
-    df_dados = pd.DataFrame(auxDf, columns=["codigo_estacao", "datahora_utc", "chuva_mm", "qualificacao"])
-    df_dados.to_excel(CAMINHO / fr"medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx", index=False)
-    df_dados.to_excel(CAMINHO / fr"estacoes_salvar.xlsx", index=False)
-     
-    arquivo = (CAMINHO / f"estacoes_medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx")
+    df_info["coleta"] = datetime.today().strftime('%Y-%m-%d %H:%M:%S')
 
-    df_info["coleta"] = datetime.today().strftime('%Y/%m/%d %H:%M:%S')
-    with pd.ExcelWriter(arquivo, engine="openpyxl") as writer:
-
-        df_info.to_excel(
-            writer,
-            sheet_name="info",
-            index=False
-        )
+    # df_dados_24h = pd.DataFrame(auxDf, columns=["codigo_estacao", "datahora_utc", "chuva_mm", "qualificacao", "link"])
+    df_dados_24h = (pd.DataFrame(auxDf, columns=["link", "datahora_utc", "chuva_mm", "qualificacao"])
+                    .merge(df_info[["link", "codigo_estacao"]], how="left", on="link")
+                    .drop_duplicates()
+                    .sort_values(["codigo_estacao", "datahora_utc"])
+                    [["codigo_estacao", "datahora_utc", "chuva_mm", "qualificacao"]]
+                )
+    df_dados_24h.to_excel(CAMINHO / fr"medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx", index=False)
         
-        df_dados.to_excel(
-            writer,
-            sheet_name="dados",
-            index=False
+    try:
+        base = pd.read_excel(arquivo)
+        df = pd.concat(
+            [base, df_dados_24h],
+            ignore_index=True
         )
+    except FileNotFoundError:
+        df = df_dados_24h.copy()
+    df_dados = (df
+        .drop_duplicates(subset=["codigo_estacao", "datahora_utc"])
+        .sort_values(["codigo_estacao", "datahora_utc"])
+        .reset_index(drop=True)
+    )
+    df_dados.to_excel(CAMINHO / fr"medicoes_salvar.xlsx", index=False)
+    
+    arquivos = [(CAMINHO / f"estacoes_medicoes_salvar.xlsx"),
+                (CAMINHO / f"estacoes_medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx")]
+    for arquivo in arquivos:
+        with pd.ExcelWriter(arquivo, engine="openpyxl") as writer:
+
+            df_info.to_excel(
+                writer,
+                sheet_name="info",
+                index=False
+            )
+            
+            df_dados.to_excel(
+                writer,
+                sheet_name="dados",
+                index=False
+            )
 
     # df_dados    
-
     
 LOGIN = "#####"
 SENHA = "#####"
@@ -329,10 +300,14 @@ CAMINHO = Path(r"#####")
 while True:
 
     inicio = datetime.now()
-    
+    print(f"INICIANDO LOOP EM {inicio.strftime(format = '%Y/%m/%d %H:%M')}")
+          
     raspar(LOGIN, SENHA, CAMINHO)
+    fim = datetime.now()
     
-    espera = 10*60 - (datetime.now() - inicio).total_seconds()
+    clear_output(wait=True)
+    print(f"LOOP INICIADO EM {inicio.strftime(format = '%Y/%m/%d %H:%M')}, FINALIZADO EM {fim.strftime(format = '%Y/%m/%d %H:%M')}")
+
+    espera = 10*60 - (fim - inicio).total_seconds()
     print(f"Aguardando {espera} segundos para completar 10 minutos")
     time_aux.sleep(espera)
-
