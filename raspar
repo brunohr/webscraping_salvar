@@ -258,7 +258,7 @@ def raspar(LOGIN, SENHA, CAMINHO):
     df_dados_24h.to_excel(CAMINHO / fr"medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx", index=False)
         
     try:
-        base = pd.read_excel(arquivo)
+        base = pd.read_excel(CAMINHO / fr"estacoes_medicoes_salvar.xlsx")
         df = pd.concat(
             [base, df_dados_24h],
             ignore_index=True
