@@ -221,15 +221,12 @@ def raspar(LOGIN, SENHA, CAMINHO):
                                 link,
                                 datahora,
                                 chuva_mm,
-                                qualificacao,
+                                qualificacao if qualificacao != '' else None,
                             ])
 
                     # print(f"{estacao_id}: {i+1}/{I}")
                     print(f"{link}: {i+1}/{I}")
-
-                    links.pop(0)
-                    i += 1
-
+                    
                     break
 
                 except TimeoutException:
@@ -238,7 +235,10 @@ def raspar(LOGIN, SENHA, CAMINHO):
 
             else:
                 print(f"Falhou após {MAX_RETRY} tentativas")
-                break
+        
+            links.pop(0)
+            i += 1
+        
     try:
         driver.find_element('xpath', '//*[@id="expandmenu"]/ul/li[1]/div/a/input').click()
     except ElementNotInteractableException:
@@ -251,46 +251,45 @@ def raspar(LOGIN, SENHA, CAMINHO):
     # df_dados_24h = pd.DataFrame(auxDf, columns=["codigo_estacao", "datahora_utc", "chuva_mm", "qualificacao", "link"])
     df_dados_24h = (pd.DataFrame(auxDf, columns=["link", "datahora_utc", "chuva_mm", "qualificacao"])
                     .merge(df_info[["link", "codigo_estacao"]], how="left", on="link")
-                    .drop_duplicates()
-                    .sort_values(["codigo_estacao", "datahora_utc"])
                     [["codigo_estacao", "datahora_utc", "chuva_mm", "qualificacao"]]
                 )
     df_dados_24h.to_excel(CAMINHO / fr"medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx", index=False)
         
     try:
         base = pd.read_excel(CAMINHO / fr"estacoes_medicoes_salvar.xlsx")
-        df = pd.concat(
+        df = (pd.concat(
             [base, df_dados_24h],
             ignore_index=True
-        )
+        ))
     except FileNotFoundError:
         df = df_dados_24h.copy()
+        
     df_dados = (df
-        .drop_duplicates(subset=["codigo_estacao", "datahora_utc"])
-        .sort_values(["codigo_estacao", "datahora_utc"])
-        .reset_index(drop=True)
-    )
+                # .fillna(None).replace("", None)
+                .sort_values(["codigo_estacao", "datahora_utc"])
+                .drop_duplicates()
+                .reset_index(drop=True))
     df_dados.to_excel(CAMINHO / fr"medicoes_salvar.xlsx", index=False)
     
     arquivos = [(CAMINHO / f"estacoes_medicoes_salvar.xlsx"),
                 (CAMINHO / f"estacoes_medicoes_salvar_{datetime.today().strftime('%Y%m%d%H%M%S')}.xlsx")]
     for arquivo in arquivos:
         with pd.ExcelWriter(arquivo, engine="openpyxl") as writer:
-
-            df_info.to_excel(
-                writer,
-                sheet_name="info",
-                index=False
-            )
-            
-            df_dados.to_excel(
+            (df_dados
+             .to_excel(
                 writer,
                 sheet_name="dados",
                 index=False
-            )
+            ))
+            (df_info
+             .to_excel(
+                writer,
+                sheet_name="info",
+                index=False
+            ))
 
-    # df_dados    
-    
+    # df_dados   
+
 LOGIN = "#####"
 SENHA = "#####"
 CAMINHO = Path(r"#####")
